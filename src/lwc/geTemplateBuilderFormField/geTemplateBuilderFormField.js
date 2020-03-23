@@ -54,6 +54,16 @@ export default class geTemplateBuilderFormField extends LightningElement {
         return null;
     }
 
+    get fieldApiName() {
+        if (this.field && this.field.apiName) {
+            return this.field.apiName;
+        }
+
+        if (this.field && this.field.fieldApiName) {
+            return this.field.fieldApiName;
+        }
+    }
+
     get labelHelpText() {
         if (this.fieldMapping && this.fieldMapping.Target_Object_Mapping_Dev_Name) {
             const objectMapping =
@@ -128,6 +138,38 @@ export default class geTemplateBuilderFormField extends LightningElement {
     get labelGeAssistiveFormFieldDown() {
         return GeLabelService.format(this.CUSTOM_LABELS.geAssistiveFieldDown, [this.field.label]);
     }
+
+    /*******************************************************************************
+    * Start getters for data-qa-locator attributes
+    */
+
+    get qaLocatorInputFieldLabel() {
+        return `input ${this.CUSTOM_LABELS.commonFieldLabel} ${this.field.label}`;
+    }
+
+    get qaLocatorInputDefaultValue() {
+        return `input ${this.CUSTOM_LABELS.commonDefaultValue} ${this.field.label}`;
+    }
+
+    get qaLocatorCheckboxRequired() {
+        return `checkbox ${this.CUSTOM_LABELS.commonRequired} ${this.field.label}`;
+    }
+
+    get qaLocatorButtonDelete() {
+        return `button Delete ${this.field.label}`;
+    }
+
+    get qaLocatorButtonUp() {
+        return `button Up ${this.field.label}`;
+    }
+
+    get qaLocatorButtonDown() {
+        return `button Down ${this.field.label}`;
+    }
+
+    /*******************************************************************************
+    * End getters for data-qa-locator attributes
+    */
 
     stopPropagation(event) {
         event.stopPropagation();

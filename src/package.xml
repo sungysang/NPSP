@@ -371,7 +371,11 @@
         <members>PSC_Opportunity_TDTM</members>
         <members>PSC_PartialSoftCredit_TDTM</members>
         <members>PSC_PartialSoftCredit_TEST</members>
+        <members>PS_IntegrationService</members>
+        <members>PS_IntegrationService_TEST</members>
         <members>RD2_Constants</members>
+        <members>RD2_CustomFieldMapper</members>
+        <members>RD2_CustomFieldMapper_TEST</members>
         <members>RD2_DataMigrationBase_BATCH</members>
         <members>RD2_DataMigrationDryRun_BATCH</members>
         <members>RD2_DataMigrationEnablement</members>
@@ -396,6 +400,7 @@
         <members>RD2_OpportunityService</members>
         <members>RD2_OpportunityService_TEST</members>
         <members>RD2_QueueableService</members>
+        <members>RD2_RecurringDonation</members>
         <members>RD2_RecurringDonationsOpp_TDTM</members>
         <members>RD2_RecurringDonationsOpp_TEST</members>
         <members>RD2_RecurringDonations_TDTM</members>
@@ -408,6 +413,7 @@
         <members>RD2_ValidationService_TEST</members>
         <members>RD2_VisualizeScheduleController</members>
         <members>RD2_VisualizeScheduleController_TEST</members>
+        <members>RD2_YearValueProcessor</members>
         <members>RD_AddDonationsBTN_CTRL</members>
         <members>RD_AddDonationsBTN_TEST</members>
         <members>RD_BulkTests_TEST</members>
@@ -879,8 +885,8 @@
         <members>Address__c.State_Lower_District__c</members>
         <members>Address__c.State_Upper_District__c</members>
         <members>Address__c.Verification_Status__c</members>
-        <members>Address__c.Verified__c</members>
         <members>Address__c.Verified_Date__c</members>
+        <members>Address__c.Verified__c</members>
         <members>Allocation__c.Amount__c</members>
         <members>Allocation__c.Campaign__c</members>
         <members>Allocation__c.General_Accounting_Unit__c</members>
@@ -1457,6 +1463,7 @@
         <members>CONV_Configuration_Options</members>
         <members>CONV_Contacts_Attached</members>
         <members>CONV_Conversion_Process</members>
+        <members>CONV_ConversionAccessDenied</members>
         <members>CONV_Fundamental_Changes</members>
         <members>CONV_Important_Info_Header</members>
         <members>CONV_Local_Expert</members>
@@ -1635,6 +1642,7 @@
         <members>RD_ErrorLegacyBatchJobCannotBeRun</members>
         <members>RD_ErrorMoreClosedWonOpportunitiesThanInstallments</members>
         <members>RD_ErrorNotEnoughClosedValueForFixedLength</members>
+        <members>RD_RefreshOppsContinueMessage</members>
         <members>REL_Create_New_Relationship</members>
         <members>REL_Former</members>
         <members>REL_No_Relationships</members>
@@ -1953,6 +1961,7 @@
         <members>commonEdit</members>
         <members>commonError</members>
         <members>commonFieldLabel</members>
+        <members>commonMissingRequiredFields</members>
         <members>commonNewGift</members>
         <members>commonNext</members>
         <members>commonNo</members>
@@ -2014,12 +2023,15 @@
         <members>geAssistiveSectionUp</members>
         <members>geAssistiveShowMenu</members>
         <members>geAssistiveSpinner</members>
+        <members>geBodyAdvancedFieldMapping</members>
         <members>geBodyBatchDefaultValues</members>
         <members>geBodyBatchFieldBundleInfo</members>
         <members>geBodyBatchHeaderLeftCol</members>
         <members>geBodyBatchHeaderRightCol</members>
         <members>geBodyBatchHeaderWarning</members>
         <members>geBodyEmptyFormSection</members>
+        <members>geBodyFieldBundlesLeftCol</members>
+        <members>geBodyFormFieldsDescLeftCol</members>
         <members>geBodyFormFieldsLeftCol</members>
         <members>geBodyFormFieldsLeftColAdditional</members>
         <members>geBodyFormFieldsModalDeleteSection</members>
@@ -2075,6 +2087,8 @@
         <members>geErrorPageLevelMissingRequiredFields</members>
         <members>geErrorPageLevelMissingRequiredGroupFields</members>
         <members>geErrorRequiredField</members>
+        <members>geGauAllocationsBundle</members>
+        <members>geHeaderAdvancedFormFields</members>
         <members>geHeaderBatchEnterInfo</members>
         <members>geHeaderBatchGiftEntry</members>
         <members>geHeaderBatchHeaderLeftCol</members>
@@ -2100,9 +2114,18 @@
         <members>geHeaderPageLevelError</members>
         <members>geHeaderSingleGiftEntry</members>
         <members>geHeaderTemplateInfoLeftCol</members>
+        <members>geHelpTextAccount1Mapping</members>
+        <members>geHelpTextAccount2Mapping</members>
+        <members>geHelpTextAddressMapping</members>
+        <members>geHelpTextAllocation1Mapping</members>
+        <members>geHelpTextAllocation2Mapping</members>
+        <members>geHelpTextAllocationBundle</members>
         <members>geHelpTextBatchHeaderFieldLabelLabel</members>
+        <members>geHelpTextContact1Mapping</members>
+        <members>geHelpTextContact2Mapping</members>
         <members>geHelpTextFormFieldsFieldCustomLabel</members>
         <members>geHelpTextFormFieldsFieldLabelLabel</members>
+        <members>geHelpTextHouseholdMapping</members>
         <members>geLabelCustomTableSelectedFields</members>
         <members>geLabelCustomTableSourceFields</members>
         <members>geLabelSectionName</members>
@@ -2477,6 +2500,7 @@
         <members>stgCreatedBy</members>
         <members>stgDIFMNonAdminError</members>
         <members>stgDefaultValue</members>
+        <members>stgDeletePermissionError</members>
         <members>stgDeploymentCustomMetadataMappingEnabled</members>
         <members>stgDeploymentHasInvalidHelpTextMappings</members>
         <members>stgDeploymentHelpTextMappingEnabled</members>
@@ -2485,6 +2509,7 @@
         <members>stgDeploymentTryAgain</members>
         <members>stgDocumentation</members>
         <members>stgDontAutoScheduleHelpText</members>
+        <members>stgEditPermissionError</members>
         <members>stgErrorINaming</members>
         <members>stgErrorInvalidClass</members>
         <members>stgErrorInvalidNameFormat</members>
