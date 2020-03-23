@@ -5,6 +5,8 @@ npsp_lex_locators={
     'spl-breadcrumb':"//div[@class= 'slds-media__body']/p[text()='{}']",
     'breadcrumb-link':"//a[@title='{}' and contains(@class,'BreadCrumbItem')]",
     'obj-header':"//h1//*[text()='{}']",
+    'button-title':"//button[@title='{}']",
+    'dropdown_spinner': 'css: div#divLoading',
     'placeholder': "//*[contains(@placeholder,'{}')]",
     'app_launcher':{
         'select-option':'//span/mark[text()="{}"]',
@@ -172,17 +174,18 @@ npsp_lex_locators={
         'input_field':'//div[@class="slds-form-element"][./label[text()="{}"]]/div/input',
         },
     'npsp_settings':{
-        'panel_sub_link':'//ul/li/a[text()="{}"]',
+        'main_menu':'//div[@class="slds-tree__branch slds-tree__item"][.//a[text()="{}"]]',
+        'panel_sub_link':'//ul/li[contains(@class,"slds-is-selected")]/a[text()="{}"]',
         'field_value':"//div[@class='slds-form-element'][./label[contains(text(),'{}')]]/div/span",
         'side_panel':'//div[@id="{}"]//child::button[contains(@class,"chevronright")]',
-        'list':"//div[contains(@class,'slds-form_horizontal')]/div[@class='slds-form-element']/label[text()='{}']/following-sibling::div/select",
+        'list':"//div[@class='slds-form-element']/label[text()='{}']/following-sibling::div/select",
         'multi_list':'//div[contains(@class,"slds-form_horizontal")]/div[@class="slds-form-element"][./label[text()="{}"]]/div//select',
-        'list_val':'//div[@class="slds-form-element"][./label[text()="{}"]]/div/span[text()="{}"]',
+        'list_val':'//div[@class="slds-form-element"]/label[text()="{}"]/following-sibling::div/span[text()="{}"]',
         'status':'//div[contains(@class,"slds-tile__title")][.//span[text()="{}"]]/div[contains(@class,"slds-col")]//span[text()="{}"]',
         'button':'//form[.//h1[contains(text(),"{}")]]//input[contains(@value,"{}")]',
         'completed':'//span[contains(@class, \'slds-theme_success\')]',
         'batch-button':'//div[@id="{}"]//child::input[@value="{}"]',
-        'checkbox':'//div[@id= "idPanel{}"]/descendant::span[@class="slds-checkbox_faux"]'
+        'checkbox':'//label[./span[text()="{}"]]/descendant::span[@class="slds-checkbox_faux"]'
         },
     'data_imports':{
         'status':'//div[contains(@class,"slds-tile__title")][./p[text()="BDI_DataImport_BATCH"]]/div[contains(@class,"slds-col")]/span[text()="{}"]',

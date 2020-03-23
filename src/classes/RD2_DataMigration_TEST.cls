@@ -41,8 +41,9 @@ private class RD2_DataMigration_TEST {
     private static final Date DATE_ESTABLISHED = TODAY.addMonths(-3);
     private static final Decimal AMOUNT_VALUE = 100;
     private static String LOG_CONTEXT = 'RunDataMigrationTest';
-    private static Integer MIGRATION_INSTALLMENT_NUMBER_FLAG = RD2_OpportunityService.MIGRATION_INSTALLMENT_NUMBER_FLAG;
+    private static Integer MIGRATION_INSTALLMENT_NUMBER_FLAG = RD2_DataMigrationBase_BATCH.MIGRATION_INSTALLMENT_NUMBER_FLAG;
 
+    private static final TEST_SObjectGateway.RecurringDonationGateway rdGateway = new TEST_SObjectGateway.RecurringDonationGateway();
     private static final TEST_SObjectGateway.RecurringDonationScheduleGateway rdScheduleGateway = new TEST_SObjectGateway.RecurringDonationScheduleGateway();
     private static final TEST_SObjectGateway.OpportunityGateway oppGateway = new TEST_SObjectGateway.OpportunityGateway();
     private static final TEST_SObjectGateway.AsyncApexJobGateway jobGateway = new TEST_SObjectGateway.AsyncApexJobGateway();
@@ -255,7 +256,7 @@ private class RD2_DataMigration_TEST {
         npe03__Recurring_Donation__c convertedRD = getRecords()[0];
 
         System.assertEquals(rd.npe03__Date_Established__c, convertedRD.npe03__Date_Established__c, 'Date Established should be unchanged');
-        System.assertEquals(DATE_ESTABLISHED.addMonths(1), convertedRD.StartDate__c, 'Start Date should match with the earliest Opp Close Date');
+        System.assertEquals(DATE_ESTABLISHED.addMonths(1), convertedRD.StartDate__c, 'Effective Date should match with the earliest Opp Close Date');
         System.assertEquals(rd.Day_of_Month__c, convertedRD.Day_of_Month__c, 'Day of Month should be unchanged');
 
         System.assertEquals(rd.npe03__Amount__c, convertedRD.npe03__Amount__c, 'Amount should be unchanged');
@@ -502,7 +503,7 @@ private class RD2_DataMigration_TEST {
         npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder(getContact().Id)
             .withId(null)
             .withInstallmentPeriodYearly()
-            .withInstallments(installments)
+            .withPlannedInstallments(installments)
             .withScheduleType(RD_Constants.SCHEDULE_TYPE_DIVIDE_BY)
             .withOpenEndedStatusNone()
             .build();
@@ -515,6 +516,8 @@ private class RD2_DataMigration_TEST {
             .convertToEnhancedRD();
 
         System.assertEquals(AMOUNT_VALUE / installments, convertedRD.npe03__Amount__c, 'Amount should be copied from Installment Amount');
+        System.assertEquals(RD2_Constants.RECURRING_TYPE_FIXED, convertedRD.RecurringType__c, 'Recurring Type should be Fixed');
+        System.assertEquals(installments, convertedRD.npe03__Installments__c, 'Number of Planned Installments should be unchanged');
     }
 
     /**
@@ -547,7 +550,7 @@ private class RD2_DataMigration_TEST {
             .convertToEnhancedRD();
 
         System.assertEquals(DATE_ESTABLISHED, convertedRD.StartDate__c,
-            'Start Date should match the Recurring Donation Established Date');
+            'Effective Date should match the Recurring Donation Established Date');
     }
 
     /**
@@ -584,7 +587,7 @@ private class RD2_DataMigration_TEST {
             .convertToEnhancedRD();
 
         System.assertEquals(opps[0].CloseDate, convertedRD.StartDate__c,
-            'Start Date should match the earliest Opportunity Close Date');
+            'Effective Date should match the earliest Opportunity Close Date');
     }
 
     /**
@@ -656,17 +659,7 @@ private class RD2_DataMigration_TEST {
         }
 
         for (npe03__Recurring_Donation__c convertedRD : convertedRDs) {
-            System.assertNotEquals(null, convertedRD.Day_of_Month__c, 'Day of Month should not be null');
-
-            Integer dayOfMonth = convertedRD.npe03__Next_Payment_Date__c.day();
-            if (dayOfMonth < 29) {
-                System.assertEquals(dayOfMonth, Integer.valueOf(convertedRD.Day_of_Month__c),
-                    'Day of Month should match the Next Payment Date day when less than 29: '
-                        + JSON.serialize(convertedRD));
-            } else {
-                System.assertEquals(RD2_Constants.DAY_OF_MONTH_LAST_DAY, convertedRD.Day_of_Month__c,
-                    'Day of Month should be Last Day');
-            }
+            assertDayOfMonth(convertedRD, convertedRD.npe03__Next_Payment_Date__c.day());
         }
     }
 
@@ -692,17 +685,7 @@ private class RD2_DataMigration_TEST {
         }
 
         for (npe03__Recurring_Donation__c convertedRD : convertedRDs) {
-            System.assertNotEquals(null, convertedRD.Day_of_Month__c, 'Day of Month should not be null');
-
-            Integer dayOfMonth = convertedRD.npe03__Date_Established__c.day();
-            if (dayOfMonth < 29) {
-                System.assertEquals(dayOfMonth, Integer.valueOf(convertedRD.Day_of_Month__c),
-                    'Day of Month should match the Date Established day when less than 29: '
-                        + JSON.serialize(convertedRD));
-            } else {
-                System.assertEquals(RD2_Constants.DAY_OF_MONTH_LAST_DAY, convertedRD.Day_of_Month__c,
-                    'Day of Month should be Last Day');
-            }
+            assertDayOfMonth(convertedRD, convertedRD.npe03__Date_Established__c.day());
         }
     }
 
@@ -883,18 +866,71 @@ private class RD2_DataMigration_TEST {
 
         Id jobId = runDataMigration();
 
-        List<Error__c> errors = errorGateway.getRecords();
-        System.assertEquals(1, errors.size(), 'Validation error should be logged');
-
-        System.assertEquals(true, errors[0].Full_Message__c.contains(System.Label.RD_DonorIsRequired), 'Error message should match');
-        System.assertEquals(System.Label.errErrorTypeValidationFailed, errors[0].Error_Type__c, 'Error Type should match');
-        System.assertEquals(rd.Id, errors[0].Related_Record_ID__c, 'Error related record Id should be RD Id');
-        System.assertEquals(ERR_Handler.getRecordURL(rd.Id), errors[0].Record_URL__c, 'Error record URL should match');
-        System.assertEquals(getLogContextMigration(jobId), errors[0].Context_Type__c, 'Error Context Type should match');
+        assertDonorIsRequiredError(jobId, rd);
 
         assertLegacyFormat(getRecords());
 
         assertBatchSummaryFailed(jobId, 1);
+    }
+
+    /**
+     * @description Verifies an error is created when store error in error log settings is disabled
+     * and migration is run in dry run mode
+     */
+    @IsTest
+    private static void shouldLogDryRunErrorWhenStoreErrorIsDisabled() {
+
+        disableStoreErrorSettings();
+
+        npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder(getContact().Id)
+            .withId(null)
+            .build();
+        insert rd;
+
+        //Make sure an error is generated when dry run is run
+        TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, true);
+        rd.npe03__Contact__c = null;
+        update rd;
+        TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, false);
+
+        Id jobId = executeAndFinishDryRun();
+
+        assertDonorIsRequiredError(jobId, rd);
+
+        assertLegacyFormat(getRecords());
+
+        assertBatchSummaryFailed(jobId, 1);
+
+    }
+
+     /**
+     * @description Verifies an error is created when store error in error log settings is disabled
+     * and data migration is run.
+     */
+    @IsTest
+    private static void shouldLogDataMigrationErrorWhenStoreErrorIsDisabled() {
+
+        disableStoreErrorSettings();
+
+        npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder(getContact().Id)
+            .withId(null)
+            .build();
+        insert rd;
+
+       //Make sure an error is generated when data migration is run
+        TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, true);
+        rd.npe03__Contact__c = null;
+        update rd;
+        TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, false);
+
+        Id jobId = runDataMigration();
+
+        assertDonorIsRequiredError(jobId, rd);
+
+        assertLegacyFormat(getRecords());
+
+        assertBatchSummaryFailed(jobId, 1);
+
     }
 
     /**
@@ -964,6 +1000,7 @@ private class RD2_DataMigration_TEST {
         npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder(getContact().Id)
             .withId(null)
             .withOpenEndedStatusNone()
+            .withPlannedInstallments(12)
             .build();
         insert rd;
 
@@ -1148,22 +1185,22 @@ private class RD2_DataMigration_TEST {
 
         Opportunity opp = oppById.get(opps[0].Id);
         System.assertEquals(true, opp.IsClosed && opp.IsWon, 'Already Closed Won Opp should be unchanged');
-        System.assertEquals(opps[0].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(opps[0].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c,
             'The Opp Installment Number should be unchanged');
 
         opp = oppById.get(opps[1].Id);
         System.assertEquals(false, opp.IsClosed, 'Open Opp with Close Date in the past should stay open');
-        System.assertEquals(opps[1].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(opps[1].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c,
             'The Opp Installment Number should be unchanged');
 
         opp = oppById.get(opps[2].Id);
         System.assertEquals(false, opp.IsClosed, 'Open Opp with Close Date equal to today should stay open');
-        System.assertEquals(opps[2].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(opps[2].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c,
             'The Opp Installment Number should be unchanged');
 
         opp = oppById.get(opps[3].Id);
         System.assertEquals(true, opp.IsClosed && !opp.IsWon, 'The next future Open Opp should be Closed Lost');
-        System.assertEquals(MIGRATION_INSTALLMENT_NUMBER_FLAG, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(MIGRATION_INSTALLMENT_NUMBER_FLAG, opp.Recurring_Donation_Installment_Number__c,
             'The Closed Lost Opp should have the Installment Number overriden');
         System.assertEquals(getLogContextMigration(jobId), opp.Closed_Lost_Reason__c, 'Closed Lost Reason should indicate migration');
 
@@ -1228,12 +1265,12 @@ private class RD2_DataMigration_TEST {
 
         Opportunity opp = oppById.get(opps[2].Id);
         System.assertEquals(false, opp.IsClosed, 'The first future Open Opp should stay open');
-        System.assertEquals(opps[2].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(opps[2].Recurring_Donation_Installment_Number__c, opp.Recurring_Donation_Installment_Number__c,
             'The Opp Installment Number should be unchanged');
 
         opp = oppById.get(opps[3].Id);
         System.assertEquals(true, opp.IsClosed && !opp.IsWon, 'The next future Open Opp should be Closed Lost');
-        System.assertEquals(MIGRATION_INSTALLMENT_NUMBER_FLAG, opp.Recurring_Donation_Installment_Number__c, 
+        System.assertEquals(MIGRATION_INSTALLMENT_NUMBER_FLAG, opp.Recurring_Donation_Installment_Number__c,
             'The Closed Lost Opp should have the Installment Number overriden');
         System.assertEquals(getLogContextMigration(jobId), opp.Closed_Lost_Reason__c, 'Closed Lost Reason should indicate migration');
 
@@ -1327,10 +1364,7 @@ private class RD2_DataMigration_TEST {
 
         RD2_EnablementService_TEST.setRecurringDonations2Enabled();
 
-        UTIL_BatchJobService_TEST.MockBatchableContext batchContext = new UTIL_BatchJobService_TEST.MockBatchableContext();
-        RD2_DataMigration_BATCH batch = new RD2_DataMigration_BATCH();
-        batch.execute(batchContext, getRecords());
-        batch.finish(batchContext);
+        Id jobId = executeAndFinishMigration();
 
         List<Error__c> errors = errorGateway.getRecords();
         System.assertEquals(0, errors.size(), 'No error should be logged: ' + errors);
@@ -1349,7 +1383,7 @@ private class RD2_DataMigration_TEST {
         System.assertEquals(true, oppById.get(opps[3].Id).IsClosed && !oppById.get(opps[3].Id).IsWon,
             'Second RD: Open Opp with Close Date in future should be Closed Lost');
 
-        assertBatchSummarySuccess(batchContext.getJobId(), rds.size());
+        assertBatchSummarySuccess(jobId, rds.size());
     }
 
     /**
@@ -1484,7 +1518,7 @@ private class RD2_DataMigration_TEST {
     }
 
     /**
-     * @description Verifies Recurring Donation with no Open Opportunity 
+     * @description Verifies Recurring Donation with no Open Opportunity
      * does not have new Opps created during data migration
      */
     @IsTest
@@ -1506,6 +1540,122 @@ private class RD2_DataMigration_TEST {
         assertBatchSummarySuccess(jobId, 1);
     }
 
+    /**
+     * @description Verifies a closed Recurring Donation with
+     * empty Date Established and Next Donation Date fields can be converted to the enhanced format
+     */
+    @IsTest
+    private static void shouldConvertClosedRDWhenDateEstablishedAndNextDonationDateAreEmpty() {
+        npe03__Recurring_Donation__c rd = TEST_RecurringDonationBuilder.constructLegacyBuilder()
+            .withContact(getContact().Id)
+            .withAmount(AMOUNT_VALUE)
+            .withInstallmentPeriodMonthly()
+            .withDateEstablished(null)
+            .withNextDonationDate(null)
+            .withDayOfMonth(null)
+            .withOpenEndedStatusClosed()
+            .build();
+        insert rd;
+
+        Id jobId = runDataMigration();
+
+        List<Error__c> errors = errorGateway.getRecords();
+        System.assertEquals(0, errors.size(), 'No error should be logged: ' + errors);
+
+        assertEnhancedFormat(getRecords());
+
+        assertBatchSummarySuccess(jobId, 1);
+    }
+
+    /**
+     * @description Verifies an open Recurring Donation with
+     * empty Date Established can be converted to the enhanced format
+     */
+    @IsTest
+    private static void shouldConvertOpenRDWhenDateEstablishedIsEmpty() {
+        final Date nextDonationDate = TODAY.addMonths(1);
+        npe03__Recurring_Donation__c rd = TEST_RecurringDonationBuilder.constructLegacyBuilder()
+            .withContact(getContact().Id)
+            .withAmount(AMOUNT_VALUE)
+            .withInstallmentPeriodMonthly()
+            .withDateEstablished(null)
+            .withNextDonationDate(nextDonationDate)
+            .withDayOfMonth(null)
+            .withOpenEndedStatusOpen()
+            .build();
+        insert rd;
+
+        //ensure Effective Date is not specified to simulate an RD created before
+        //the field is created in the codebase and defaulted to today if empty
+        rd.StartDate__c = null;
+        update rd;
+        System.assertEquals(null, getRecords()[0].StartDate__c, 'Effective Date should not be specified');
+
+        Id jobId = runDataMigration();
+
+        List<Error__c> errors = errorGateway.getRecords();
+        if (isDayOfMonthRestrictedPicklistError(errors)) {
+            return;//the org does not have the Last Day picklist added, so return from the test
+        }
+
+        System.assertEquals(0, errors.size(), 'No error should be logged: ' + errors);
+
+        rd = getRecords()[0];
+        assertEnhancedFormat(new List<npe03__Recurring_Donation__c>{ rd });
+
+        System.assertEquals(nextDonationDate, rd.StartDate__c,
+            'Effective Date should equal to the Next Donation Date when the RD has no related Opp');
+
+        assertDayOfMonth(rd, nextDonationDate.day());
+
+        assertBatchSummarySuccess(jobId, 1);
+    }
+
+    /**
+     * @description Verifies an open Recurring Donation with
+     * empty Next Donation Date can be converted to the enhanced format
+     */
+    @IsTest
+    private static void shouldConvertOpenRDWhenNextDonationDateIsEmpty() {
+        npe03__Recurring_Donation__c rd = TEST_RecurringDonationBuilder.constructLegacyBuilder()
+            .withContact(getContact().Id)
+            .withAmount(AMOUNT_VALUE)
+            .withInstallmentPeriodMonthly()
+            .withDateEstablished(DATE_ESTABLISHED)
+            .withNextDonationDate(null)
+            .withDayOfMonth(null)
+            .withOpenEndedStatusOpen()
+            .build();
+        insert rd;
+
+        //ensure Effective Date is not specified to simulate an RD created before
+        //the field is created in the codebase and defaulted to today if empty
+        rd.StartDate__c = null;
+        rd.npe03__Next_Payment_Date__c = null;
+        update rd;
+        System.assertEquals(null, getRecords()[0].StartDate__c, 'Effective Date should not be specified');
+
+        Id jobId = runDataMigration();
+
+        List<Error__c> errors = errorGateway.getRecords();
+        if (isDayOfMonthRestrictedPicklistError(errors)) {
+            return;//the org does not have the Last Day picklist added, so return from the test
+        }
+
+        System.assertEquals(0, errors.size(), 'No error should be logged: ' + errors);
+
+        rd = getRecords()[0];
+        assertEnhancedFormat(new List<npe03__Recurring_Donation__c>{ rd });
+
+        System.assertEquals(DATE_ESTABLISHED, rd.StartDate__c,
+            'Effective Date should equal to the Date Established when the RD has no related Opp');
+        System.assertNotEquals(null, rd.npe03__Next_Payment_Date__c,
+            'Next Donation Date should be calculated');
+
+        assertDayOfMonth(rd, DATE_ESTABLISHED.day());
+
+        assertBatchSummarySuccess(jobId, 1);
+    }
 
     /**
      * @description Verifies Recurring Donations and their Open Opportunities are attempted to be migrated
@@ -1541,10 +1691,7 @@ private class RD2_DataMigration_TEST {
         System.assertEquals(false, RD2_EnablementService.isRecurringDonations2Enabled,
             'Enhanced RDs should not be enabled');
 
-        UTIL_BatchJobService_TEST.MockBatchableContext batchContext = new UTIL_BatchJobService_TEST.MockBatchableContext();
-        RD2_DataMigrationDryRun_BATCH batch = new RD2_DataMigrationDryRun_BATCH();
-        batch.execute(batchContext, getRecords());
-        batch.finish(batchContext);
+        Id jobId = executeAndFinishDryRun();
 
         System.assertEquals(false, RD2_EnablementService.isRecurringDonations2Enabled,
             'Enhanced RDs should not be enabled *by* Dry Run migration');
@@ -1561,7 +1708,7 @@ private class RD2_DataMigration_TEST {
             System.assertEquals(false, opp.IsClosed, 'Open Opp should be unchanged');
         }
 
-        assertBatchSummarySuccess(batchContext.getJobId(), rds.size());
+        assertBatchSummarySuccess(jobId, rds.size());
     }
 
     /**
@@ -1597,11 +1744,7 @@ private class RD2_DataMigration_TEST {
         System.assertEquals(false, RD2_EnablementService.isRecurringDonations2Enabled,
             'Enhanced RDs should not be enabled');
 
-        UTIL_BatchJobService_TEST.MockBatchableContext batchContext = new UTIL_BatchJobService_TEST.MockBatchableContext();
-        RD2_DataMigrationDryRun_BATCH batch = new RD2_DataMigrationDryRun_BATCH();
-        batch.execute(batchContext, getRecords());
-        batch.finish(batchContext);
-        Id jobId = batchContext.getJobId();
+        Id jobId = executeAndFinishDryRun();
 
         System.assertEquals(false, RD2_EnablementService.isRecurringDonations2Enabled,
             'Enhanced RDs should not be enabled *by* the Dry Run batch');
@@ -1644,14 +1787,9 @@ private class RD2_DataMigration_TEST {
                 actualException = e;
             }
         }
-
         System.assertEquals(null, actualException, 'No Exception should be generated: ' + actualException);
 
-        UTIL_BatchJobService_TEST.MockBatchableContext batchContext = new UTIL_BatchJobService_TEST.MockBatchableContext();
-        RD2_DataMigrationDryRun_BATCH batch = new RD2_DataMigrationDryRun_BATCH();
-        batch.execute(batchContext, getRecords());
-        batch.finish(batchContext);
-        Id jobId = batchContext.getJobId();
+        Id jobId = executeAndFinishDryRun();
 
         List<Error__c> errors = errorGateway.getRecords();
         System.assertEquals(0, errors.size(), 'No error should be logged: ' + errors);
@@ -1660,9 +1798,50 @@ private class RD2_DataMigration_TEST {
         System.assertEquals(dayOfMonth, rds[0].Day_of_Month__c, 'Day of Month should not change');
         assertLegacyFormat(rds);
 
-        assertBatchSummarySuccess(batchContext.getJobId(), 1);
+        assertBatchSummarySuccess(jobId, 1);
     }
 
+    /**
+     * @description Verifies that a Legacy Fixed Length RD is converted properly.
+     */
+    @IsTest
+    private static void shouldConvertFixedLengthRecurringDonation() {
+        final Integer installments = 12;
+
+        npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder()
+            .withOpenEndedStatusNone()
+            .withPlannedInstallments(installments)
+            .withDateEstablished(DATE_ESTABLISHED)
+            .build();
+
+        npe03__Recurring_Donation__c convertedRD = new RD2_DataMigrationMapper(rd)
+            .convertToEnhancedRD();
+
+        System.assertEquals(installments, convertedRD.npe03__Installments__c,
+            'Number of Planned Installments should be set to ' + installments);
+        System.assertEquals(RD2_Constants.RECURRING_TYPE_FIXED, convertedRD.RecurringType__c,
+            'The RecurringType should be fixed');
+        System.assertEquals(RD2_Constants.STATUS_ACTIVE, convertedRD.Status__c,
+            'The Recurring Donation Status should be active');
+    }
+
+    /**
+     * @description Verifies that the NumberOfPlannedInstallments field is set to null when converting an open ended RD
+     */
+    @IsTest
+    private static void shouldSetNumberOfPlannedInstallmentsToNullForOpenEndedRD() {
+        npe03__Recurring_Donation__c rd = getLegacyRecurringDonationBuilder()
+            .withOpenEndedStatusOpen()
+            .withPlannedInstallments(12)
+            .withDateEstablished(DATE_ESTABLISHED)
+            .build();
+
+        npe03__Recurring_Donation__c convertedRD = new RD2_DataMigrationMapper(rd)
+            .convertToEnhancedRD();
+
+        System.assertEquals(null, convertedRD.npe03__Installments__c,
+            'Number of Planned Installments should be set to null');
+    }
 
 
     // HELPER METHODS
@@ -1860,6 +2039,29 @@ private class RD2_DataMigration_TEST {
         );
     }
 
+    /**
+     * @description Sets store errors in error settings to false
+     * @return void
+     */
+    private static void disableStoreErrorSettings() {
+        setStoreErrorSettings(false);
+
+    }
+
+    /**
+     * @description Sets store settings to enable or disable in error settings
+     * @param isEnabled true or false
+     * @return void
+     */
+    private static void setStoreErrorSettings(Boolean isEnabled) {
+        UTIL_CustomSettingsFacade.getErrorSettingsForTests(
+            new Error_Settings__c(
+                Error_Notifications_On__c = false,
+                Store_Errors_On__c = isEnabled
+            )
+        );
+    }
+
     /****
     * @description Returns expected data migration log context
     * @param jobId Batch job Id
@@ -1908,6 +2110,35 @@ private class RD2_DataMigration_TEST {
         Test.stopTest();
 
         return jobId;
+    }
+
+    /****
+    * @description Executes data migration batch execute() and finish() methods
+    * @return Id Batch job Id
+    */
+    private static Id executeAndFinishMigration() {
+        return executeAndFinishBatch(new RD2_DataMigration_BATCH());
+    }
+
+    /****
+    * @description Executes dry run migration batch execute() and finish() methods
+    * @return Id Batch job Id
+    */
+    private static Id executeAndFinishDryRun() {
+        return executeAndFinishBatch(new RD2_DataMigrationDryRun_BATCH());
+    }
+
+    /****
+    * @description Executes batch execute() and finish() methods
+    * @return Id Batch job Id
+    */
+    private static Id executeAndFinishBatch(RD2_DataMigrationBase_BATCH batch) {
+        UTIL_BatchJobService_TEST.MockBatchableContext batchContext = new UTIL_BatchJobService_TEST.MockBatchableContext();
+
+        batch.execute(batchContext, getRecords());
+        batch.finish(batchContext);
+
+        return batchContext.getJobId();
     }
 
     /****
@@ -1974,7 +2205,7 @@ private class RD2_DataMigration_TEST {
     }
 
     /****
-    * @description Assert Recurring Donations are still in the legacy format
+    * @description Asserts Recurring Donations are still in the legacy format
     * @param rds Recurring Donations
     * @return void
     */
@@ -1982,6 +2213,59 @@ private class RD2_DataMigration_TEST {
         for (npe03__Recurring_Donation__c rd : rds) {
             System.assertEquals(null, rd.InstallmentFrequency__c, 'The RD should not be converted: ' + rd);
         }
+    }
+
+    /****
+    * @description Asserts Recurring Donation Day Of Month field value
+    * @param rd Recurring Donation
+    * @param expectedDayOfMonth Expected Day of Month value
+    * @return void
+    */
+    private static void assertDayOfMonth(npe03__Recurring_Donation__c rd, Integer expectedDayOfMonth) {
+        System.assertNotEquals(null, rd.Day_of_Month__c, 'Day of Month should not be null');
+
+        if (expectedDayOfMonth < 29) {
+            System.assertEquals(expectedDayOfMonth, Integer.valueOf(rd.Day_of_Month__c),
+                'Day of Month should match the expected day when less than 29: '+ JSON.serialize(rd));
+        } else {
+            System.assertEquals(RD2_Constants.DAY_OF_MONTH_LAST_DAY, rd.Day_of_Month__c,
+                'Day of Month should be set as the Last Day');
+        }
+    }
+
+    /****
+    * @description Asserts if the error message contains Donor is required field error
+    * @param jobId Batch job Id
+    * @param rd Recurring Donation record
+    * @return void
+    */
+    private static void assertDonorIsRequiredError(Id jobId, npe03__Recurring_Donation__c rd) {
+        List<Error__c> errors = errorGateway.getRecords();
+        System.assertEquals(1, errors.size(), 'Validation error should be logged');
+
+        System.assertEquals(true, errors[0].Full_Message__c.contains(System.Label.RD_DonorIsRequired), 'Error message should match');
+        System.assertEquals(System.Label.errErrorTypeValidationFailed, errors[0].Error_Type__c, 'Error Type should match');
+        System.assertEquals(rd.Id, errors[0].Related_Record_ID__c, 'Error related record Id should be RD Id');
+        System.assertEquals(ERR_Handler.getRecordURL(rd.Id), errors[0].Record_URL__c, 'Error record URL should match');
+
+        if (errors[0].Context_Type__c.contains(RD2_DataMigrationBase_BATCH.LOG_CONTEXT_DRY_RUN)) {
+            System.assertEquals(getLogContextDryRun(jobId), errors[0].Context_Type__c, 'Error Context Type should match');
+        } else {
+            System.assertEquals(getLogContextMigration(jobId), errors[0].Context_Type__c, 'Error Context Type should match');
+        }
+    }
+
+    /****
+    * @description Checks if the logged error is generated on a day > 28 in the month
+    * and the RD2 metadata has not been deployed
+    * @param List<Error__c> Errors (if any)
+    * @return Boolean
+    */
+    private static Boolean isDayOfMonthRestrictedPicklistError(List<Error__c> errors) {
+        return !errors.isEmpty() 
+            && errors[0].Full_Message__c.contains(
+                Schema.npe03__Recurring_Donation__c.Day_of_Month__c.getDescribe().getLabel()
+            );
     }
 
     /***
