@@ -57,9 +57,51 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
         TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, true);
 
         evaluateOpportunities(opps, oldOpps, triggerAction);
+        populateRDLookupForCommitment(opps, triggerAction);
 
         TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, false);
         return null;
+    }
+
+    /***
+    * @description Populate the Recurring Donation lookup field on Opportunities based on CommitmentId
+    * @param rds Trigger.new records
+    * @param triggerAction BeforeInsert, AfterInsert, etc.
+    * @return void
+    */
+    public void populateRDLookupForCommitment(List<Opportunity> opps, TDTM_Runnable.Action triggerAction) {
+        if (triggerAction == TDTM_Runnable.Action.BeforeInsert) {
+            Map<Id, Id> commitmentIdByOppId = new Map<Id, Id>();
+
+            // this is POC only - there is almost certainly a more efficient way to handle this edge case
+            // than looping through every changed opp twice
+            for (Opportunity opp : opps) {
+                if (opp.CommitmentId__c != null && opp.npe03__Recurring_Donation__c == null) {
+                    commitmentIdByOppId.put(opp.Id, opp.CommitmentId__c);
+                }
+            }
+
+            // find any RDs that match the commitmentIds on incoming Opps
+            List<npe03__Recurring_Donation__c> rds = [
+                SELECT Id, CommitmentId__c
+                FROM npe03__Recurring_Donation__c
+                WHERE CommitmentId__c IN :commitmentIdByOppId.values()
+            ];
+            Map<Id, Id> rdIdByCommitmentId = new Map<Id, Id>();
+            for (npe03__Recurring_Donation__c rd : rds) {
+                rdIdByCommitmentId.put(rd.CommitmentId__c, rd.Id);
+            }
+
+            // add RD lookups to opps as needed
+            for (Opportunity opp : opps) {
+                if (opp.CommitmentId__c != null && opp.npe03__Recurring_Donation__c == null) {
+                    Id commitmentId = commitmentIdByOppId.get(opp.Id);
+                    if (rdIdByCommitmentId.containsKey(commitmentId)) {
+                        opp.npe03__Recurring_Donation__c = rdIdByCommitmentId.get(commitmentId);
+                    }
+                }
+            }
+        }
     }
 
     /***
