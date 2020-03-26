@@ -94,6 +94,7 @@ public class RD2_RecurringDonations_TDTM extends TDTM_Runnable {
 
         autogenerateNames(rds, oldRds, triggerAction);
         transformDataBeforeInsert(rds, triggerAction);
+        updateOppsAssociatedToCommitment(rds, triggerAction);
         validate(rds, oldRds, triggerAction);
         transformDataInBeforeContext(rds, oldRds, triggerAction);
         handleSchedulesInAfterContext(rds, oldRds, triggerAction);
@@ -180,6 +181,39 @@ public class RD2_RecurringDonations_TDTM extends TDTM_Runnable {
             if (rd.InstallmentFrequency__c == null) {
                 rd.InstallmentFrequency__c = RD2_Constants.DEFAULT_INSTALLMENT_FREQUENCY;
             }
+        }
+    }
+
+    /***
+    * @description Update opportunities associated with the commitmentIds on new RDs
+    * @param rds Trigger.new records
+    * @param triggerAction AfterInsert
+    */
+    private void updateOppsAssociatedToCommitment(List<npe03__Recurring_Donation__c> rds, TDTM_Runnable.Action triggerAction) {
+        if (triggerAction != TDTM_Runnable.Action.AfterInsert) {
+            return;
+        }
+
+        Map<Id, Id> rdIdByCommitmentId = new Map<Id, Id>();
+        for (npe03__Recurring_Donation__c rd : rds) {
+            if (rd.CommitmentId__c != null) {
+                rdIdByCommitmentId.put(rd.CommitmentId__c, rd.Id);
+            }
+        }
+
+        List<Opportunity> opportunitiesToUpdate = [
+            SELECT Id, npe03__Recurring_Donation__c, CommitmentId__c 
+                FROM Opportunity
+                WHERE CommitmentId__c IN :rdIdByCommitmentId.keySet()
+                    AND npe03__Recurring_Donation__c = null
+        ];
+
+        for (Opportunity opp : opportunitiesToUpdate) {
+            opp.npe03__Recurring_Donation__c = rdIdByCommitmentId.get(opp.CommitmentId__c);
+        }
+
+        if (!opportunitiesToUpdate.isEmpty()) {
+            update opportunitiesToUpdate;
         }
     }
 
