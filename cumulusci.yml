@@ -36,6 +36,12 @@ tasks:
             subfolder: Cumulus-LDV-Tests-master
             url: 'https://github.com/SalesforceFoundation/Cumulus-LDV-Tests/archive/master.zip'
 
+    deploy_bdi_rd_poc:
+        description: Deploys configuration for proof of concept implementation of BDI support for Recurring Donations
+        class_path: cumulusci.tasks.salesforce.Deploy
+        options:
+            path: unpackaged/config/bdi-rd-poc
+    
     deploy_ldv_tests:
         description: Deploy the LDV-Tests repo to your org.
         class_path: cumulusci.tasks.salesforce.Deploy
