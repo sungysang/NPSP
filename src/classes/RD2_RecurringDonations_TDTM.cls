@@ -194,7 +194,7 @@ public class RD2_RecurringDonations_TDTM extends TDTM_Runnable {
             return;
         }
 
-        Map<Id, Id> rdIdByCommitmentId = new Map<Id, Id>();
+        Map<String, Id> rdIdByCommitmentId = new Map<String, Id>();
         for (npe03__Recurring_Donation__c rd : rds) {
             if (rd.CommitmentId__c != null) {
                 rdIdByCommitmentId.put(rd.CommitmentId__c, rd.Id);

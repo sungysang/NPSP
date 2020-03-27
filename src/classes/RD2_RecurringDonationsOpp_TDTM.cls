@@ -71,7 +71,7 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
     */
     public void populateRDLookupForCommitment(List<Opportunity> opps, TDTM_Runnable.Action triggerAction) {
         if (triggerAction == TDTM_Runnable.Action.BeforeInsert) {
-            Map<Id, Id> commitmentIdByOppId = new Map<Id, Id>();
+            Map<Id, String> commitmentIdByOppId = new Map<Id, String>();
 
             // this is POC only - there is almost certainly a more efficient way to handle this edge case
             // than looping through every changed opp twice
@@ -87,7 +87,7 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
                 FROM npe03__Recurring_Donation__c
                 WHERE CommitmentId__c IN :commitmentIdByOppId.values()
             ];
-            Map<Id, Id> rdIdByCommitmentId = new Map<Id, Id>();
+            Map<String, Id> rdIdByCommitmentId = new Map<String, Id>();
             for (npe03__Recurring_Donation__c rd : rds) {
                 rdIdByCommitmentId.put(rd.CommitmentId__c, rd.Id);
             }
