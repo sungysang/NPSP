@@ -95,7 +95,7 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
             // add RD lookups to opps as needed
             for (Opportunity opp : opps) {
                 if (opp.CommitmentId__c != null && opp.npe03__Recurring_Donation__c == null) {
-                    Id commitmentId = commitmentIdByOppId.get(opp.Id);
+                    String commitmentId = commitmentIdByOppId.get(opp.Id);
                     if (rdIdByCommitmentId.containsKey(commitmentId)) {
                         opp.npe03__Recurring_Donation__c = rdIdByCommitmentId.get(commitmentId);
                     }

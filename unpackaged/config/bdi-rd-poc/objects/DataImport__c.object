@@ -25,7 +25,7 @@
                 <sorted>false</sorted>
                 <value>
                     <fullName>Monthly</fullName>
-                    <default>true</default>
+                    <default>false</default>
                     <label>Monthly</label>
                 </value>
                 <value>
