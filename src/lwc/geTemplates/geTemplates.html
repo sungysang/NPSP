@@ -56,7 +56,6 @@
                                                     custom-icon={batchesListViewIcon}
                                                     filtered-by={batchListFilteredBy}
                                                     onrowaction={handleBatchesTableRowAction}
-                                                    show-standard-footer
                                                     ontogglemodal={toggleModal}>
                                     </c-ge-list-view>
                                 </div>
@@ -90,7 +89,7 @@
                                                     actions={templatesTableActions}
                                                     onrowaction={handleTemplatesTableRowAction}
                                                     ontogglemodal={toggleModal}
-                                                    show-standard-footer>
+                                                    show-standard-footer='true'>
                                         <lightning-button label={CUSTOM_LABELS.geButtonTemplatesTabCreateTemplate}
                                                           class="slds-m-right_small"
                                                           onclick={handleNewFormTemplate}
