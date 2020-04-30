@@ -56,11 +56,28 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
 
         TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, true);
 
+        matchOppsToRecurringDonations(opps, triggerAction);
         evaluateOpportunities(opps, oldOpps, triggerAction);
         populateRDLookupForCommitment(opps, triggerAction);
 
         TDTM_ProcessControl.setRecursionFlag(TDTM_ProcessControl.flag.RD, false);
         return null;
+    }
+
+    /**
+    * @description Match new Opportunities not referencing any Recurring Donation and originated from Elevate 
+    * with a Recurring Donation having the same Commitment Id.
+    * @param opps Opportunities to be created
+    * @param triggerAction BeforeInsert, AfterInsert, etc.
+    * @return void
+    */
+    private void matchOppsToRecurringDonations(List<Opportunity> opps, TDTM_Runnable.Action triggerAction) {
+        if (triggerAction != TDTM_Runnable.Action.BeforeInsert) {
+            return;
+        }
+
+        new RD2_ElevateIntegrationService()
+            .matchOppsToRecurringDonations(opps);
     }
 
     /***
@@ -220,7 +237,6 @@ public class RD2_RecurringDonationsOpp_TDTM extends TDTM_Runnable {
             || opp.CloseDate != oldOpp.CloseDate
             || opp.npe03__Recurring_Donation__c != oldOpp.npe03__Recurring_Donation__c;
     }
-
 
     /***
     * @description Currency validator on Opportunities related to Recurring Donations
