@@ -7,6 +7,7 @@ Library         cumulusci.robotframework.PageObjects
 Suite Setup     Run Keywords
 ...             Setup Test Data
 ...             Open Test Browser
+Suite Teardown  Delete Records and Close Browser
 
 
 *** Keywords ***
